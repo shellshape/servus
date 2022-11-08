@@ -1,0 +1,5 @@
+address: "0.0.0.0:8080"
+stores:
+  - type: "Local"
+    directory: "testdata"
+    servepath: "pog"
