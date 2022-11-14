@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Index of {{dirname}}/</title>
+
+  <style>
+    body {
+      font-family: sans-serif;
+    }
+
+    ul {
+      list-style-type: none;
+      margin: 0 0 0 1.5em;
+      line-height: 1.5em;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Index of {{dirname}}/</h1>
+  <ul>
+    {{#each entries}}
+      <li>
+        <a href="{{this.name}}{{#if this.is_dir}}/{{/if}}">
+          {{#if this.is_dir}}
+            📂
+          {{else}}
+            📄
+          {{/if}}
+          {{this.name}}{{#if this.is_dir}}/{{/if}}
+        </a>
+      </li>
+    {{/each}}
+  </ul>
+</body>
+</html>

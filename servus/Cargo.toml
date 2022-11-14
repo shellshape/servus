@@ -19,3 +19,4 @@ directories = "4.0.1"
 anyhow = "1.0.66"
 clap = { version = "4.0.22", features = ["derive"] }
 local-ip-address = "0.4.2"
+handlebars = "4.3.5"

@@ -3,3 +3,4 @@ stores:
   - type: "Local"
     directory: "testdata"
     servepath: "pog"
+    browse: true

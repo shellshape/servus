@@ -58,6 +58,7 @@ impl Config {
 pub struct LocalStore {
     pub servepath: String,
     pub directory: String,
+    pub browse: Option<bool>,
 }
 
 gen_store_impl!(LocalStore);
