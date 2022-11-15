@@ -2,6 +2,7 @@ use crate::conf::StoreType;
 use actix_files::NamedFile;
 use actix_web::{error, Either, Handler, HttpRequest, HttpResponse, Result};
 use handlebars::Handlebars;
+use s3::{creds::Credentials, serde_types::Object, Bucket, Region};
 use serde::Serialize;
 use std::{
     error::Error,
@@ -35,6 +36,15 @@ impl TryFrom<DirEntry> for BrowseEntry {
             name: name.to_string_lossy().into(),
             is_dir: meta.is_dir(),
         })
+    }
+}
+
+impl From<&Object> for BrowseEntry {
+    fn from(value: &Object) -> Self {
+        BrowseEntry {
+            name: value.key.clone(),
+            is_dir: false,
+        }
     }
 }
 
@@ -106,6 +116,65 @@ impl Handler<HttpRequest> for StorageHandler {
                     return Ok(Either::Right(HttpResponse::Ok().body(r)));
                 }
                 Ok(Either::Left(f))
+            }),
+
+            StoreType::S3(s3) => Box::pin(async move {
+                let creds =
+                    Credentials::new(Some(&s3.accesskey), Some(&s3.secretkey), None, None, None)
+                        .map_err(error::ErrorInternalServerError)?;
+
+                let region = if let Some(endpoint) = s3.endpoint {
+                    Region::Custom {
+                        region: s3.region.unwrap_or_else(|| "us-east-1".into()),
+                        endpoint,
+                    }
+                } else {
+                    s3.region
+                        .unwrap_or_else(|| Region::UsEast1.to_string())
+                        .parse()
+                        .map_err(error::ErrorInternalServerError)?
+                };
+
+                let bucket = Bucket::new(&s3.bucket, region, creds)
+                    .map_err(error::ErrorInternalServerError)?
+                    .with_path_style();
+
+                if path.as_os_str().is_empty() {
+                    if !s3.browse.unwrap_or_default() {
+                        return Err(error::ErrorNotFound("not found"));
+                    }
+
+                    let entries: Vec<BrowseEntry> = bucket
+                        .list("/".into(), Some("/".into()))
+                        .await
+                        .map_err(error::ErrorInternalServerError)?
+                        .first()
+                        .ok_or_else(|| {
+                            error::ErrorInternalServerError("no bucket found to list contents from")
+                        })?
+                        .contents
+                        .iter()
+                        .map(|v| v.into())
+                        .collect();
+
+                    let d = BrowseData {
+                        dirname: bucket.name,
+                        entries,
+                    };
+
+                    let r = hb
+                        .render("t_browse", &d)
+                        .map_err(error::ErrorInternalServerError)?;
+                    return Ok(Either::Right(HttpResponse::Ok().body(r)));
+                }
+
+                let data = bucket
+                    .get_object(path.to_str().unwrap_or_default())
+                    .await
+                    .map_err(error::ErrorNotFound)?;
+                let data = Vec::from(data.bytes());
+
+                Ok(Either::Right(HttpResponse::Ok().body(data)))
             }),
         }
     }

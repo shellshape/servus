@@ -20,6 +20,7 @@ macro_rules! gen_store_impl {
 #[serde(tag = "type")]
 pub enum StoreType {
     Local(LocalStore),
+    S3(S3Store),
 }
 
 impl Deref for StoreType {
@@ -28,6 +29,7 @@ impl Deref for StoreType {
     fn deref(&self) -> &Self::Target {
         match self {
             StoreType::Local(local) => local,
+            StoreType::S3(s3) => s3,
         }
     }
 }
@@ -57,11 +59,23 @@ impl Config {
 #[derive(Deserialize, Debug, Clone)]
 pub struct LocalStore {
     pub servepath: String,
-    pub directory: String,
     pub browse: Option<bool>,
+    pub directory: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct S3Store {
+    pub servepath: String,
+    pub browse: Option<bool>,
+    pub accesskey: String,
+    pub secretkey: String,
+    pub bucket: String,
+    pub region: Option<String>,
+    pub endpoint: Option<String>,
 }
 
 gen_store_impl!(LocalStore);
+gen_store_impl!(S3Store);
 
 pub trait Store: DisplayDirectory {
     fn name(&self) -> &'static str;
@@ -75,5 +89,11 @@ pub trait DisplayDirectory {
 impl DisplayDirectory for LocalStore {
     fn directory(&self) -> &str {
         &self.directory
+    }
+}
+
+impl DisplayDirectory for S3Store {
+    fn directory(&self) -> &str {
+        &self.bucket
     }
 }
