@@ -1,8 +1,6 @@
 pub mod conf;
 pub mod web;
 
-use std::{collections::HashMap, io, net::IpAddr, path::Path};
-
 use clap::Parser;
 use config::{
     builder::DefaultState, Config, ConfigBuilder, ConfigError, Environment, File, FileFormat, Map,
@@ -11,6 +9,7 @@ use config::{
 use directories::ProjectDirs;
 use env_logger::Env;
 use log::{debug, info};
+use std::{collections::HashMap, io, net::IpAddr, path::Path};
 
 #[derive(Parser, Clone, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -31,6 +30,10 @@ struct Args {
     /// (<directory> or <servepath>:<directory>).
     #[arg(short, long)]
     serve: Vec<String>,
+
+    /// Allow browsing directories
+    #[arg(short, long)]
+    browse: bool,
 }
 
 impl Source for Args {
@@ -38,7 +41,7 @@ impl Source for Args {
         Box::new((*self).clone())
     }
 
-    fn collect(&self) -> std::result::Result<Map<String, Value>, ConfigError> {
+    fn collect(&self) -> Result<Map<String, Value>, ConfigError> {
         let mut m: HashMap<String, Value> = Map::new();
         let uri: String = "command line arguments".into();
 
@@ -73,6 +76,10 @@ impl Source for Args {
                         (
                             "servepath".into(),
                             Value::new(Some(&uri), ValueKind::String(servepath.into())),
+                        ),
+                        (
+                            "browse".into(),
+                            Value::new(Some(&uri), ValueKind::Boolean(self.browse)),
                         ),
                     ])),
                 )
