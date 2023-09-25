@@ -2,7 +2,7 @@
 name = "servus"
 description = "A dead simple application to serve files and directories over HTTP."
 authors = ["Ringo Hoffmann <contact@zekro.de>"]
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/shellshape/servus"
