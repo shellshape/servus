@@ -22,11 +22,19 @@ You can - of course - also set up servus as a small content delivery serivce. Th
 
 `/etc/servus/config.yml`
 ```yml
-address: "0.0.0.0:80"
+address: "0.0.0.0:8081"
 stores:
   - type: "Local"
-    directory: "/data"
-    servepath: "data"
+    directory: "testdata"
+    servepath: "localdata"
+    browse: true
+  - type: "S3"
+    servepath: "s3data"
+    accesskey: minioadmin
+    secretkey: minioadmin
+    bucket: test
+    endpoint: http://localhost:9000
+    browse: false
 ```
 
 ```
@@ -37,10 +45,3 @@ $ docker run \
     ghcr.io/zekrotja/servus:latest \
         --config /etc/servus/config.yml
 ```
-
-## ToDo's
-
-Some things I want to add in the future ot this project:
-- [ ] Stats and Monitoring with Prometheus
-- [ ] More store types like S3 buckets
-- [ ] SSL support

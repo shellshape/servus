@@ -1,6 +1,13 @@
-address: "0.0.0.0:8080"
+address: "0.0.0.0:8081"
 stores:
   - type: "Local"
     directory: "testdata"
-    servepath: "pog"
+    servepath: "localdata"
     browse: true
+  - type: "S3"
+    servepath: "s3data"
+    accesskey: minioadmin
+    secretkey: minioadmin
+    bucket: test
+    endpoint: http://localhost:9000
+    browse: false

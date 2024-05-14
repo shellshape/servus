@@ -2,7 +2,7 @@
 name = "servus"
 description = "A dead simple application to serve files and directories over HTTP."
 authors = ["Ringo Hoffmann <contact@zekro.de>"]
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/shellshape/servus"
@@ -12,15 +12,19 @@ homepage = "https://github.com/shellshape/servus"
 
 [dependencies]
 log = "0.4.0"
-env_logger = "0.8.4"
+env_logger = "0.11.3"
 actix-web = "4"
-actix-cors = "0.6.2"
+actix-cors = "0.7"
 actix-files = "0.6.2"
-config = "0.13.2"
+config = "0.14"
 serde = "1.0.147"
-directories = "4.0.1"
+directories = "5"
 anyhow = "1.0.66"
 clap = { version = "4.0.22", features = ["derive"] }
-local-ip-address = "0.4.2"
-handlebars = "4.3.5"
-rust-s3 = { version = "0.32.3", default-features = false, features = ["tokio-rustls-tls", "fail-on-err"] }
+local-ip-address = "0.6"
+handlebars = "5"
+rust-s3 = { version = "0.33.0", default-features = false, features = [
+  "tokio-rustls-tls",
+  "fail-on-err",
+] }
+open = "5.1.2"

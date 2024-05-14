@@ -2,13 +2,12 @@ use crate::conf::StoreType;
 use actix_files::NamedFile;
 use actix_web::{error, Either, Handler, HttpRequest, HttpResponse, Result};
 use handlebars::Handlebars;
-use s3::{creds::Credentials, serde_types::Object, Bucket, Region};
+use s3::{creds::Credentials, error::S3Error, serde_types::Object, Bucket, Region};
 use serde::Serialize;
 use std::{
     error::Error,
-    fs::{self, DirEntry},
+    fs::{self, DirEntry, File},
     future::Future,
-    io::ErrorKind,
     path::{Path, PathBuf},
     pin::Pin,
 };
@@ -74,26 +73,28 @@ impl Handler<HttpRequest> for StorageHandler {
 
     fn call(&self, req: HttpRequest) -> Self::Future {
         let path: PathBuf = req.match_info().query("filename").parse().unwrap();
-        let hb = self.handlebars.clone();
+        let hb: Handlebars<'_> = self.handlebars.clone();
 
         match self.store_type.clone() {
             StoreType::Local(local) => Box::pin(async move {
-                let f =
-                    NamedFile::open(Path::new(&local.directory).join(path)).map_err(|e| match e
-                        .kind()
-                    {
-                        ErrorKind::NotFound => error::ErrorNotFound("not found"),
-                        _ => error::ErrorInternalServerError(e),
-                    })?;
+                let path = Path::new(&local.directory).join(path);
+                let f = File::open(&path)?;
 
-                let meta = f.file().metadata()?;
+                let meta = dbg!(f.metadata())?;
                 if meta.is_dir() {
                     if !local.browse.unwrap_or_default() {
+                        let index = path.join("index.html");
+                        if index.exists() {
+                            return Ok(Either::Right(
+                                HttpResponse::Found()
+                                    .append_header(("Location", "index.html"))
+                                    .finish(),
+                            ));
+                        }
                         return Err(error::ErrorNotFound("not found"));
                     }
 
-                    let contents =
-                        fs::read_dir(f.path()).map_err(error::ErrorInternalServerError)?;
+                    let contents = fs::read_dir(&path).map_err(error::ErrorInternalServerError)?;
 
                     let entries: Result<_, _> = contents
                         .filter(|c| c.is_ok())
@@ -101,8 +102,7 @@ impl Handler<HttpRequest> for StorageHandler {
                         .collect();
 
                     let d = BrowseData {
-                        dirname: f
-                            .path()
+                        dirname: path
                             .file_name()
                             .unwrap_or_default()
                             .to_string_lossy()
@@ -115,6 +115,8 @@ impl Handler<HttpRequest> for StorageHandler {
                         .map_err(error::ErrorInternalServerError)?;
                     return Ok(Either::Right(HttpResponse::Ok().body(r)));
                 }
+
+                let f = NamedFile::from_file(f, &path)?;
                 Ok(Either::Left(f))
             }),
 
@@ -141,11 +143,22 @@ impl Handler<HttpRequest> for StorageHandler {
 
                 if path.as_os_str().is_empty() {
                     if !s3.browse.unwrap_or_default() {
-                        return Err(error::ErrorNotFound("not found"));
+                        let head_res = bucket
+                            .head_object(path.join("index.html").to_string_lossy())
+                            .await;
+                        return match head_res {
+                            Ok(_) => Ok(Either::Right(
+                                HttpResponse::Found()
+                                    .append_header(("Location", "index.html"))
+                                    .finish(),
+                            )),
+                            Err(S3Error::Http(404, _)) => Err(error::ErrorNotFound("not found")),
+                            Err(err) => Err(error::ErrorInternalServerError(err)),
+                        };
                     }
 
                     let entries: Vec<BrowseEntry> = bucket
-                        .list("/".into(), Some("/".into()))
+                        .list("".into(), Some("/".into()))
                         .await
                         .map_err(error::ErrorInternalServerError)?
                         .first()
@@ -172,7 +185,7 @@ impl Handler<HttpRequest> for StorageHandler {
                     .get_object(path.to_str().unwrap_or_default())
                     .await
                     .map_err(error::ErrorNotFound)?;
-                let data = Vec::from(data.bytes());
+                let data = data.bytes().to_vec();
 
                 Ok(Either::Right(HttpResponse::Ok().body(data)))
             }),

@@ -14,26 +14,30 @@ use std::{collections::HashMap, io, net::IpAddr, path::Path};
 #[derive(Parser, Clone, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Config file location.
+    /// Config file location
     #[arg(short, long)]
     config: Option<String>,
 
-    /// The serve address (for example: 0.0.0.0:80).
+    /// The serve address
     #[arg(short, long)]
     address: Option<String>,
 
-    /// The Logging level.
+    /// The Logging level
     #[arg(short, long, default_value = "info,actix_server=warn")]
     loglevel: String,
 
     /// Serve directories
-    /// (<directory> or <servepath>:<directory>).
+    /// (<directory> or <servepath>:<directory>)
     #[arg(short, long)]
     serve: Vec<String>,
 
     /// Allow browsing directories
     #[arg(short, long)]
     browse: bool,
+
+    /// Open address in browser
+    #[arg(short, long)]
+    open: bool,
 }
 
 impl Source for Args {
@@ -120,6 +124,8 @@ async fn main() -> io::Result<()> {
         cfg = cfg.add_source(File::from(p).required(true));
     }
 
+    let open = args.open;
+
     let cfg = cfg
         .add_source(Environment::with_prefix("SERVUS").separator("_"))
         .add_source(args)
@@ -133,7 +139,7 @@ async fn main() -> io::Result<()> {
 
     debug!("{:#?}", cfg);
 
-    let bind_addr = cfg.address.unwrap_or_else(|| "0.0.0.0:80".into());
+    let bind_addr = cfg.address.unwrap_or_else(|| "0.0.0.0:8080".into());
     let (ip_addr, port) = unwrap_address(&bind_addr)?;
 
     info!(
@@ -149,6 +155,10 @@ async fn main() -> io::Result<()> {
     cfg.stores
         .iter()
         .for_each(|s| info!("{}: {} -> /{}", s.name(), s.directory(), s.servepath()));
+
+    if open {
+        open::that(format!("http://{}:{}", ip_addr, port))?;
+    }
 
     web::run((ip_addr, port), cfg.stores).await
 }
