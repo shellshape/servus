@@ -2,14 +2,18 @@ pub mod conf;
 pub mod web;
 
 use clap::Parser;
+use config::builder::DefaultState;
 use config::{
-    builder::DefaultState, Config, ConfigBuilder, ConfigError, Environment, File, FileFormat, Map,
-    Source, Value, ValueKind,
+    Config, ConfigBuilder, ConfigError, Environment, File, FileFormat, Map, Source, Value,
+    ValueKind,
 };
 use directories::ProjectDirs;
 use env_logger::Env;
 use log::{debug, info};
-use std::{collections::HashMap, io, net::IpAddr, path::Path};
+use std::collections::HashMap;
+use std::io;
+use std::net::IpAddr;
+use std::path::Path;
 
 #[derive(Parser, Clone, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -61,11 +65,8 @@ impl Source for Args {
             .iter()
             .map(|v| {
                 let v_split: Vec<&str> = v.splitn(2, ':').collect();
-                let (servepath, directory): (&str, &str) = if v_split.len() == 1 {
-                    ("", v_split[0])
-                } else {
-                    (v_split[0], v_split[1])
-                };
+                let (servepath, directory): (&str, &str) =
+                    if v_split.len() == 1 { ("", v_split[0]) } else { (v_split[0], v_split[1]) };
                 Value::new(
                     Some(&uri),
                     ValueKind::Table(Map::from([

@@ -2,8 +2,10 @@ mod storage_handler;
 
 use self::storage_handler::StorageHandler;
 use crate::conf::StoreType;
-use actix_web::{middleware::Logger, web, App, HttpServer};
-use std::{io, net, sync::Arc};
+use actix_web::middleware::Logger;
+use actix_web::{web, App, HttpServer};
+use std::sync::Arc;
+use std::{io, net};
 
 pub async fn run<A>(addr: A, sources: Vec<StoreType>) -> io::Result<()>
 where

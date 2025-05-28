@@ -1,16 +1,18 @@
 use crate::conf::StoreType;
 use actix_files::NamedFile;
-use actix_web::{error, Either, Handler, HttpRequest, HttpResponse, Result};
+use actix_web::http::StatusCode;
+use actix_web::{Either, Handler, HttpRequest, HttpResponse, ResponseError, Result, error};
 use handlebars::Handlebars;
-use s3::{creds::Credentials, error::S3Error, serde_types::Object, Bucket, Region};
+use s3::creds::Credentials;
+use s3::error::S3Error;
+use s3::serde_types::Object;
+use s3::{Bucket, Region};
 use serde::Serialize;
-use std::{
-    error::Error,
-    fs::{self, DirEntry, File},
-    future::Future,
-    path::{Path, PathBuf},
-    pin::Pin,
-};
+use std::error::Error;
+use std::fs::{self, DirEntry, File};
+use std::future::Future;
+use std::path::{Path, PathBuf};
+use std::pin::Pin;
 
 #[derive(Serialize)]
 struct BrowseData {
@@ -152,7 +154,11 @@ impl Handler<HttpRequest> for StorageHandler {
                                     .append_header(("Location", "index.html"))
                                     .finish(),
                             )),
-                            Err(S3Error::Http(404, _)) => Err(error::ErrorNotFound("not found")),
+                            Err(S3Error::Http(err))
+                                if err.status_code() == StatusCode::NOT_FOUND =>
+                            {
+                                Err(error::ErrorNotFound("not found"))
+                            }
                             Err(err) => Err(error::ErrorInternalServerError(err)),
                         };
                     }
